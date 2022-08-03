@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32611.2
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cf-java-gpu-fix", "cf-java-gpu-fix\cf-java-gpu-fix.csproj", "{DB6A9139-4DBA-4540-A679-64254252807B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5A2FB001-3A27-4C77-B728-1B439EAFAE7B}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\app-release.yml = .github\workflows\app-release.yml
+		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
+		.github\workflows\dotnet-ci.yml = .github\workflows\dotnet-ci.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DB6A9139-4DBA-4540-A679-64254252807B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB6A9139-4DBA-4540-A679-64254252807B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB6A9139-4DBA-4540-A679-64254252807B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB6A9139-4DBA-4540-A679-64254252807B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EA0CD6A5-03BF-4B80-A711-60A6130F54B2}
+	EndGlobalSection
+EndGlobal
