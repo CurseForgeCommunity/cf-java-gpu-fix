@@ -2,7 +2,13 @@
 using System.Collections.Concurrent;
 using System.Security.Principal;
 
-Console.WriteLine("Hi! I will attempt to set so that your javaw.exe will use the GPU!");
+Log("Hi! I will attempt to set so that your javaw.exe will use the GPU!");
+
+if (!OperatingSystem.IsWindows())
+{
+    Log("This program is only for Windows, sorry!", LogLevel.Error);
+    return -1;
+}
 
 const string GPURegKey = @"Software\Microsoft\DirectX\UserGpuPreferences";
 
@@ -12,23 +18,19 @@ var winIdentity = new WindowsPrincipal(WindowsIdentity.GetCurrent());
 
 if (!winIdentity.IsInRole(WindowsBuiltInRole.Administrator))
 {
-    Console.WriteLine();
+    Log("""
+Error: You need to run this program as an administrator
+Right click me and use "Run as administrator"
 
-    Console.WriteLine("Error: You need to run this program as an administrator");
-    Console.WriteLine("Right click me and use \"Run as administrator\"");
-
-    Console.WriteLine();
-
-    Console.WriteLine("(I need it, since I'm gonna rewrite some stuff in your registry)");
+(I need it, since I'm gonna rewrite some stuff in your registry)
+""", LogLevel.Error);
 
     Console.ReadLine();
 
     return -1;
 }
 
-Console.WriteLine();
-
-Console.WriteLine("[INFO] Checking for Overwolf/CurseForge registry keys");
+Log("Checking for Overwolf/CurseForge registry keys");
 var cfRegKey = Registry.CurrentUser.OpenSubKey(@"Software\Overwolf\CurseForge\");
 if (cfRegKey != null)
 {
@@ -36,27 +38,27 @@ if (cfRegKey != null)
 
     if (!string.IsNullOrWhiteSpace(cfMCRoot))
     {
-        Console.WriteLine($"[INFO] Found it! Modding path is: {cfMCRoot}");
+        Log($"Found it! Modding path is: {cfMCRoot}");
         var cfJavaExecutables = GetJavaExecutablesFromPath(cfMCRoot, "javaw.exe");
-        Console.WriteLine($"[INFO] Found {cfJavaExecutables.Count} executables, adding to list");
+        Log($"Found {cfJavaExecutables.Count} executables, adding to list");
         javaExecutables.AddRange(cfJavaExecutables.Select(j => j.FullName));
     }
 }
 else
 {
-    Console.WriteLine("[INFO] Didn't find Overwolf/CurseForge.. anyhow..");
+    Log("Didn't find Overwolf/CurseForge.. anyhow..", LogLevel.Warning);
 }
-
-Console.WriteLine();
 
 if (javaExecutables.Count == 0)
 {
-    Console.WriteLine("[INFO] Well, this was awkward, we haven't found any \"important\" java executables.");
-    Console.WriteLine("[INFO] So.. have a nice day!");
+    Log("""
+Well, this was awkward, we haven't found any "important" java executables.
+So.. have a nice day!
+""", LogLevel.Warning);
 }
 else
 {
-    Console.WriteLine($"[INFO] Do you want to continue before setting things in the registry? Gonna write {javaExecutables.Count} new keys. [Y/N]");
+    Log($"Do you want to continue before setting things in the registry? Gonna write {javaExecutables.Count} new keys. [Y/N]");
     var acceptedKeys = new[] { ConsoleKey.Y, ConsoleKey.N };
     ConsoleKey key;
     do
@@ -64,31 +66,51 @@ else
         key = Console.ReadKey(true).Key;
         if (!acceptedKeys.Contains(key))
         {
-            Console.WriteLine($"[ERROR] That was {key}, not Y or N, try again..");
+            Log($"That was {key}, not Y or N, try again..", LogLevel.Error);
         }
     } while (!acceptedKeys.Contains(key));
 
     if (key == ConsoleKey.N)
     {
-        Console.WriteLine("[INFO] Ok, exiting! Bye!");
+        Log("Oh.. Ok, exiting! Bye!");
         return 0;
     }
 
-    Console.WriteLine($"[INFO] Fixing {javaExecutables.Count} executables");
+    Log($"Fixing {javaExecutables.Count} executables in the registry");
 
     var gpuKey = Registry.CurrentUser.OpenSubKey(GPURegKey, true);
-    if (gpuKey != null)
+    if (gpuKey == null)
     {
-        foreach (var java in javaExecutables)
-        {
-            Console.WriteLine($"[INFO] Fixing \"{java}\" for you!");
-            gpuKey.SetValue(java, "GpuPreference=2;");
-        }
-
-        gpuKey.Close();
+        Log("The required registry key was missing, creating new key for you!", LogLevel.Warning);
+        gpuKey = Registry.CurrentUser.CreateSubKey(GPURegKey);
     }
 
-    Console.WriteLine("[INFO] All done! Happy playing!");
+    foreach (var java in javaExecutables)
+    {
+        Log($"Fixing \"{java}\" for you!");
+        gpuKey.SetValue(java, "GpuPreference=2;");
+    }
+
+    gpuKey.Close();
+    gpuKey.Dispose();
+    gpuKey = null;
+
+    gpuKey = Registry.CurrentUser.OpenSubKey(GPURegKey)!;
+    var keys = gpuKey.GetValueNames();
+    var missingKeys = javaExecutables.Where(j => !keys.Contains(j)).ToList();
+    if (missingKeys.Count > 0)
+    {
+        Log($"Failed to write {missingKeys.Count} keys to the registry", LogLevel.Error);
+        foreach (var java in missingKeys)
+        {
+            Log($"Missing key: {java}", LogLevel.Error);
+        }
+
+        Log("You might need to do this manually.. sorry!", LogLevel.Error);
+        return -1;
+    }
+
+    Log("All done! Happy playing!", LogLevel.Success);
 }
 
 Console.ReadLine();
@@ -97,25 +119,26 @@ return 0;
 
 ConcurrentStack<FileInfo> GetJavaExecutablesFromPath(string path, string searchPattern = "javaw.exe")
 {
-    string[] IgnoredFolders = new string[] {
+    string[] IgnoredFolders = [
         "\\$RECYCLE.BIN",
         "\\System Volume Information",
         "\\Recovery",
         "\\xtp",
         "\\Backups"
-    };
+    ];
 
     var files = new ConcurrentStack<FileInfo>();
 
-    var rootFolderFiles = new DirectoryInfo(path).GetFiles();
+    var rootFolder = new DirectoryInfo(path);
+    var rootFiles = rootFolder.EnumerateFiles(searchPattern);
 
-    foreach (var f in rootFolderFiles)
+    foreach (var f in rootFiles)
     {
         files.Push(f);
     }
 
     var directories = Directory.GetDirectories(path).Where(d => !IgnoredFolders.Any(i => d.EndsWith(i))).ToList();
-    Parallel.ForEach(directories, dir =>
+    foreach (var dir in directories)
     {
         try
         {
@@ -128,7 +151,32 @@ ConcurrentStack<FileInfo> GetJavaExecutablesFromPath(string path, string searchP
         catch
         {
         }
-    });
+    }
 
     return files;
+}
+
+void Log(string message, LogLevel level = LogLevel.Info)
+{
+    Console.ForegroundColor = level switch
+    {
+        LogLevel.Info => ConsoleColor.White,
+        LogLevel.Warning => ConsoleColor.Yellow,
+        LogLevel.Error => ConsoleColor.Red,
+        LogLevel.Success => ConsoleColor.Green,
+        _ => ConsoleColor.White
+    };
+
+    Console.Write($"[{DateTime.Now:HH:mm:ss} / ");
+    Console.Write($"{level.ToString().ToUpper()}]");
+    Console.ResetColor();
+    Console.WriteLine($" {message}");
+}
+
+enum LogLevel
+{
+    Info,
+    Warning,
+    Error,
+    Success
 }
