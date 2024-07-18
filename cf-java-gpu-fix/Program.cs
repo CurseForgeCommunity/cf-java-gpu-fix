@@ -47,6 +47,36 @@ if (cfRegKey != null)
 else
 {
     Log("Didn't find Overwolf/CurseForge.. anyhow..", LogLevel.Warning);
+
+    Log("Do you want to enter your own path? [Y/N]");
+    var acceptedKeys = new[] { ConsoleKey.Y, ConsoleKey.N };
+    ConsoleKey key;
+    do
+    {
+        key = Console.ReadKey(true).Key;
+        if (!acceptedKeys.Contains(key))
+        {
+            Log($"That was {key}, not Y or N, try again..", LogLevel.Error);
+        }
+    } while (!acceptedKeys.Contains(key));
+
+    if (key == ConsoleKey.N)
+    {
+        Log("Oh.. Ok, exiting! Bye!");
+        return 0;
+    }
+
+    Log("Enter the path of your modding folder from CurseForge/Overwolf");
+    var path = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(path))
+    {
+        Log("You didn't enter anything.. exiting..", LogLevel.Error);
+        return -1;
+    }
+
+    var cfJavaExecutables = GetJavaExecutablesFromPath(path, "javaw.exe");
+    Log($"Found {cfJavaExecutables.Count} executables, adding to list");
+    javaExecutables.AddRange(cfJavaExecutables.Select(j => j.FullName));
 }
 
 if (javaExecutables.Count == 0)
